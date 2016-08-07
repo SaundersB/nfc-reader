@@ -1,5 +1,5 @@
 # NFC_Reader
-An NFC reader for smart cards using the smartcard Python library.
+A general purpose NFC/RFID reader/writer with the ACR122U-A9 unit. 
 
 
 ## Installation && Run
