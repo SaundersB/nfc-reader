@@ -2,9 +2,9 @@
 An NFC reader for smart cards using the smartcard Python library.
 
 
-## Installation
+## Installation && Run
 1. `git clone git@github.com:SaundersB/NFC_Reader.git`
-2. python NFC_Reader.py
+2. `python NFC_Reader.py`
 3. Enjoy!
 
 ## Required Hardware
@@ -17,8 +17,10 @@ An NFC reader for smart cards using the smartcard Python library.
 * Install the [ACR122U-A9 drivers](http://www.acs.com.hk/en/driver/3/acr122u-usb-nfc-reader/) for your system
 
 ## Usage
+Use this program to interface between the ACR122U-A9 and an RFID card/chip. Connect your ACR122U-A9 and place an RFID card/chip in the bay. The LED light should light up green when the card is inserted into the bay. Change the string value in the main() to write specific values to the RFID card. 
 
-Use this program to interface between the ACR122U-A9 and an RFID card/chip.
+## Intended Continual Work
+I plan to continue to make this project more generalized so that it can be included in broader Python implementations. Additionally, I'd like to add event driven read/write of the cards with threading. 
 
 ## Contributing
 
