@@ -149,8 +149,9 @@ class NFC_Reader():
 		int_array = map(ord, string)
 		print("Writing data: " + str(int_array))
 
-		# Write the number of entries to be written.
-		UPDATE_BLOCKS_WITH_DATA.append(number_of_bytes)
+		# If the string is greater than 16 characters, break. 
+		if(len(int_array) > 16):
+			return
 
 		# Add the converted string to hex blocks to the APDU command.
 		for value in int_array:
@@ -187,54 +188,7 @@ class NFC_Reader():
 			return result
 		else:
 			print("Unable to authenticate.")
-		
-	# Returns a byte array.
-	def encode_string_to_hex(self, string):
-		print("Encoding " + str(string) + " to a byte array.")
-		byte_array = []
-		for character in string:
-			if(len(character) > 0):
-				encoded = character.encode('hex')
-				byte_array.append(encoded)
 
-		return byte_array
-
-	def encode_hex_to_int(self, hex_value):
-		print("Encoding " + str(hex_value) + " to an int.")
-		int_array = []
-		for value in hex_value:
-			result = int(ord(value))
-			int_array.append(result)
-		return int_array
-
-
-	def decode_from_hex(self, byte_array):
-		print("Decoding byte array " + str(byte_array) + " to a string.")
-		string = ""
-
-		for entry in byte_array:
-			if(len(entry) > 0):
-				decoded = entry[2:].decode('hex')
-				string += decoded
-		print("String value: " + str(string))
-		return string
-
-	def decode_from_int(self, byte_array):
-		print("Decoding byte array " + str(byte_array) + " to a string.")
-		string = ""
-		for entry in byte_array:
-			decoded = entry.decode('hex')
-			string += decoded
-		print("String value: " + str(string))
-		return string
-
-	def convert_to_byte_array(self, int_array):
-		print("Converting array to byte array")
-		print(int_array)
-
-		converted = array.array('B', int_array).tostring()
-		
-		return converted
 
 
 if __name__ == '__main__':
@@ -251,31 +205,12 @@ if __name__ == '__main__':
 	value = reader.read_data()
 	print("Read " + str(value) + " from the card.")
 
-	#reader.decode_from_int(value)
+	# 5. Write a string to the byte blocks.
+	reader.write_data("Another")
 
-	# 5. Encode a value into a hex array.
-	#encoded_value = reader.encode_string_to_hex("Hello")
-	#print(encoded_value)
-
-	# 6. Decode a hex array into a string.
-	#decoded_value = reader.decode_from_hex(encoded_value)
-	#print(decoded_value)
-
-
-	reader.write_data("Four")
-
+	# 6. Read the data blocks to verify they were written correctly.
 	value = reader.read_data()
 	print("Read " + str(value) + " from the card.")
-
-
-	#print(reader.decode_from_hex(encoded_value))
-
-	
-
-	#reader.send_command(UPDATE_BLOCKS)
-	#reader.send_command(READ_16_BINARY_BLOCKS)
-
-	#reader.get_attributes()
 
 
 
