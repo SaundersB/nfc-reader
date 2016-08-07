@@ -25,6 +25,7 @@ PICC: proximity integrated circuit card
 
 
 '''
+VERBOSE = False
 
 attributes = {
 	SCARD_ATTR_ATR_STRING: 'SCARD_ATTR_ATR_STRING',
@@ -81,8 +82,14 @@ READ_4_BINARY_BLOCKS = [0xFF,0xB0,0x00,0x04,0x04] # Read 4 bytes from the binary
 
 
 NUMBER_BYTES_TO_UPDATE = 0x10
-UPDATE_BLOCKS = [0xFF, 0xD6, 0x00, BLOCK_NUMBER, NUMBER_BYTES_TO_UPDATE, 0x00, 0x00, 0x04, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F]
+UPDATE_BLOCKS = [0xFF, 0xD6, 0x00, BLOCK_NUMBER, NUMBER_BYTES_TO_UPDATE, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F]
 
+
+UPDATE_FIXED_BLOCKS = [0xFF, 0xD6, 0x00, BLOCK_NUMBER, NUMBER_BYTES_TO_UPDATE]
+
+
+UPDATE_BLOCKS_WITH_DATA = [0xFF, 0xD6, 0x00, BLOCK_NUMBER]
+READ_BLOCKS_RECENTLY_UPDATED = [0xFF,0xB0,0x00,BLOCK_NUMBER]
 
 
 class NFC_Reader():
@@ -90,7 +97,10 @@ class NFC_Reader():
 		self.uid = uid
 		self.hresult, self.hcontext = SCardEstablishContext(SCARD_SCOPE_USER)
 		self.hresult, self.readers = SCardListReaders(self.hcontext, [])
+		assert len(self.readers) > 0
 		self.reader = self.readers[0]
+		print("Found reader: " +  str(self.reader))
+		
 		self.hresult, self.hcard, self.dwActiveProtocol = SCardConnect(
 				self.hcontext,
 				self.reader,
@@ -112,95 +122,50 @@ class NFC_Reader():
 			print '0x%.2X' % i,
 		print("\n")
 		converted = toHexString(atr, format=0)
-		print("Initial Header, T0 , TD1, TD1, T1, Tk, TCK")
-		print(converted)
-		print("3B 86 80 01 06 75 77 81 02 80 00h")
 		print("------------------------\n")
+		return converted
 
 
 	def read_uid(self):
-		print("Reading the UID...")
-		for iteration in range(1):
-			hresult, hcontext = SCardEstablishContext(SCARD_SCOPE_USER)
-			assert hresult==SCARD_S_SUCCESS
-			hresult, readers = SCardListReaders(hcontext, [])
-			assert len(readers) > 0
-			reader = readers[0]
-			print("Found reader: " +  str(reader))
-			hresult, hcard, dwActiveProtocol = SCardConnect(
-				hcontext,
-				reader,
-				SCARD_SHARE_SHARED,
-				SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1)
-			try:
-				hresult, response = SCardTransmit(hcard,dwActiveProtocol,GET_UID)
-				uid = toHexString(response, format=0)
-				print("UID: " + uid +  " , Response:  " + str(response) + " HResult: " + str(hresult))
-			except SystemError:
-				print ("No Card Found")
-			time.sleep(1)
-		print("------------------------\n")
-
+		value, self.uid = self.send_command(GET_UID)
+		print(self.uid)
 
 	def send_command(self, command):
 		print("Sending command...")
 		for iteration in range(1):
-			hresult, hcontext = SCardEstablishContext(SCARD_SCOPE_USER)
-			assert hresult==SCARD_S_SUCCESS
-			hresult, readers = SCardListReaders(hcontext, [])
-			assert len(readers) > 0
-			reader = readers[0]
-			print("Found reader: " +  str(reader))
-			hresult, hcard, dwActiveProtocol = SCardConnect(
-				hcontext,
-				reader,
-				SCARD_SHARE_SHARED,
-				SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1)
 			try:
-				hresult, response = SCardTransmit(self.hcard,dwActiveProtocol,command)
-				value = toHexString(response, format=0)
-				self.data_blocks = value
-				print("Value: " + value +  " , Response:  " + str(response) + " HResult: " + str(hresult))
+				self.hresult, self.response = SCardTransmit(self.hcard,self.dwActiveProtocol,command)
+				value = toHexString(self.response, format=0)
+				if(VERBOSE):
+					print("Value: " + value +  " , Response:  " + str(self.response) + " HResult: " + str(self.hresult))
 			except SystemError:
 				print ("No Card Found")
 			time.sleep(1)
 		print("------------------------\n")
-		return response
+		return self.response, value
 
-	def print_attribute(self, attrib, value):
-		print('-----------------', attributes[attrib], '-----------------')
-		print(value)
-		print(toHexString(value, smartcard.util.HEX))
-		print(struct.pack(*['<' + 'B' * len(value)] + value))
-
-	def get_attributes(self):
-		try:
-			for i in list(attributes.keys()):
-				hresult, attrib = SCardGetAttrib(self.hcard, i)
-				if (hresult == SCARD_S_SUCCESS):
-					self.print_attribute(i, attrib)
-				else:
-					print('-----------------', attributes[i], '-----------------')
-					print('unsupported')
-		finally:
-			hresult = SCardDisconnect(self.hcard, SCARD_UNPOWER_CARD)
-			if hresult != SCARD_S_SUCCESS:
-				raise error(
-					'Failed to disconnect: ' + \
-					SCardGetErrorMessage(hresult))
-			print('Disconnected')
 
 	def write_data(self, string):
-		response = self.send_command(AUTHENTICATE)
+		int_array = map(ord, string)
+		print("Writing data: " + str(int_array))
+
+		# Write the number of entries to be written.
+		UPDATE_BLOCKS_WITH_DATA.append(number_of_bytes)
+
+		# Add the converted string to hex blocks to the APDU command.
+		for value in int_array:
+			UPDATE_FIXED_BLOCKS.append(value)
+
+		# Authenticate with the specified block with the APDU authenticate command.
+		response, value = self.send_command(AUTHENTICATE)
+
+		print("Writing " + string + " to card...")
 		if(response == [144, 0]):
 			print("Authentication successful.")
 
 			if(len(string) > 0):
 				print("Writing data blocks...")
-				values = self.encode_to_hex(string)
-				self.send_command(READ_16_BINARY_BLOCKS)
-				self.send_command(values)
-				self.send_command(READ_16_BINARY_BLOCKS)
+				self.send_command(UPDATE_FIXED_BLOCKS)
 			else:
 				print("Please provide a valid string.")
 		else:
@@ -209,44 +174,104 @@ class NFC_Reader():
 
 
 	def read_data(self):
-		response = self.send_command(AUTHENTICATE)
+		response, value = self.send_command(AUTHENTICATE)
+		print("Reading data from card...")
 		if(response == [144, 0]):
 			print("Authentication successful.")
 			print("Reading data blocks...")
-			result = self.send_command(READ_16_BINARY_BLOCKS)
+			result, value = self.send_command(READ_16_BINARY_BLOCKS)
+
+			if(VERBOSE):
+				print("Value: " + value +  " , Response:  " + str(result))
+			print("------------------------\n")
+			return result
 		else:
 			print("Unable to authenticate.")
-		print("------------------------\n")
-		return result
-
-	def encode_to_hex(self, string):
-		print("Encoding string to a byte array.")
+		
+	# Returns a byte array.
+	def encode_string_to_hex(self, string):
+		print("Encoding " + str(string) + " to a byte array.")
 		byte_array = []
 		for character in string:
 			if(len(character) > 0):
 				encoded = character.encode('hex')
-				byte_array.append("0x" + encoded)
+				byte_array.append(encoded)
 
 		return byte_array
 
-	def decode_to_hex(self, byte_array):
-		print("Decoding byte array to a string.")
+	def encode_hex_to_int(self, hex_value):
+		print("Encoding " + str(hex_value) + " to an int.")
+		int_array = []
+		for value in hex_value:
+			result = int(ord(value))
+			int_array.append(result)
+		return int_array
+
+
+	def decode_from_hex(self, byte_array):
+		print("Decoding byte array " + str(byte_array) + " to a string.")
 		string = ""
+
 		for entry in byte_array:
 			if(len(entry) > 0):
 				decoded = entry[2:].decode('hex')
 				string += decoded
-
+		print("String value: " + str(string))
 		return string
 
+	def decode_from_int(self, byte_array):
+		print("Decoding byte array " + str(byte_array) + " to a string.")
+		string = ""
+		for entry in byte_array:
+			decoded = entry.decode('hex')
+			string += decoded
+		print("String value: " + str(string))
+		return string
+
+	def convert_to_byte_array(self, int_array):
+		print("Converting array to byte array")
+		print(int_array)
+
+		converted = array.array('B', int_array).tostring()
+		
+		return converted
+
+
 if __name__ == '__main__':
+	# 1. Create an NFC_Reader
 	reader = NFC_Reader()
+
+	# 2. Obtain the card status
 	reader.get_card_status()
+
+	# 3. Read the UID
 	reader.read_uid()
+
+	# 4. Read the data from the card.
 	value = reader.read_data()
-	values = reader.encode_to_hex("Hello")
-	print(values)
-	print(reader.decode_to_hex(values))
+	print("Read " + str(value) + " from the card.")
+
+	#reader.decode_from_int(value)
+
+	# 5. Encode a value into a hex array.
+	#encoded_value = reader.encode_string_to_hex("Hello")
+	#print(encoded_value)
+
+	# 6. Decode a hex array into a string.
+	#decoded_value = reader.decode_from_hex(encoded_value)
+	#print(decoded_value)
+
+
+	reader.write_data("Four")
+
+	value = reader.read_data()
+	print("Read " + str(value) + " from the card.")
+
+
+	#print(reader.decode_from_hex(encoded_value))
+
+	
+
 	#reader.send_command(UPDATE_BLOCKS)
 	#reader.send_command(READ_16_BINARY_BLOCKS)
 
