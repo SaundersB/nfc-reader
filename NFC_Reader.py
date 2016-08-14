@@ -24,6 +24,38 @@ PCD: proximity coupling device (the card reader)
 PICC: proximity integrated circuit card
 
 
+
+////////Card RFID////////////
+Protocol: ISO14443A
+Working frequency: 13.56 MHZ
+Reading and writing distance: 0-10cm
+Packaging materials: Pack PVC NFC Smart Card Tag 
+3.56MHz ISO14443A S50 card reader
+Frequency: 13.56 MHz
+Material: PVC
+Size: Approx. 8.5 x 5.4 x 0.1cm/ 3 x 2 x 0.04"
+Protocol: ISO14443A
+
+
+
+
+////////Paper Tag RFID///////
+Chip: Ntag213
+Physical capacity: 180 bytes
+Usable capacity: 144 bytes
+Protocol: ISO14443A
+Working frequency: 13.56 MHZ
+Reading and writing distance: 1 to 5 cm
+Reading and writing time: 1 to 2 ms
+Working temperature: -20 to 55 degree, humidity of 90%
+Erase times : > 100000 times
+Data storage: > 10 years
+Reading time: 100000 times
+Diameter: 27mm
+Packaging materials: PE self-adhesive +  coated paper
+
+
+
 '''
 VERBOSE = False
 
