@@ -36,6 +36,8 @@ RFID Tags:
 Protocol: ISO14443A
 Working frequency: 13.56 MHZ
 Reading and writing distance: 0 to 10cm
+MIFARE 1K/4K 
+Update Binary Blocks Limit: 16 + 5 Bytes
 Packaging materials: Pack PVC NFC Smart Card Tag 
 3.56MHz ISO14443A S50 card reader
 Frequency: 13.56 MHz
@@ -50,6 +52,8 @@ Reading and writing distance: 1 to 5 cm
 Chip: Ntag213
 Physical capacity: 180 bytes
 Usable capacity: 144 bytes
+MIFARE Ultralite
+Update Binary Blocks Limit: 4 Bytes at a Time
 Reading and writing time: 1 to 2 ms
 Working temperature: -20 to 55 degree, humidity of 90%
 Erase times : > 100000 times
@@ -101,6 +105,12 @@ attributes = {
 
 FOUR = 4
 
+PAGE_ONE = 0x01
+PAGE_TWO = 0x02	
+PAGE_THREE = 0x03
+PAGE_FOUR = 0x04
+PAGE_SIXTEEN = 0x16
+
 BLOCK_NUMBER = 0x04
 AUTHENTICATE_CARD = [0xFF, 0x88, 0x00, BLOCK_NUMBER, 0x60, 0x00]
 
@@ -135,7 +145,7 @@ READ_BLOCKS_RECENTLY_UPDATED = [0xFF,0xB0,0x00, BLOCK_NUMBER]
 UPDATE_FOUR_BLOCKS = [0xFF, 0xD6, 0x00, 0x04, 0x04, 0x00, 0x01, 0x02, 0x03]
 
 
-UPDATE_COMMAND = [0xFF, 0xD6, 0x00, BLOCK_NUMBER]
+UPDATE_COMMAND = [0xFF, 0xD6, 0x00, PAGE_SIXTEEN]
 
 class NFC_Reader():
 	def __init__(self):
@@ -194,6 +204,43 @@ class NFC_Reader():
 				print ("No Card Found")
 			time.sleep(1)
 		return self.response, value
+
+
+	def read_card_tag_data(self):
+		print("-------------------------------------------------------")
+		print("Reading card tag data...")
+		response, value = self.send_command(AUTHENTICATE_CARD)
+
+		if(response == [144, 0]):
+			print("Authentication successful.")
+			print("Reading data blocks...")
+			result, value = self.send_command(READ_16_BINARY_BLOCKS)
+
+			if(VERBOSE):
+				print("Value: " + value +  " , Response:  " + str(result))
+				print(self.ints_to_string(result))
+			print("-------------------------------------------------------")
+			return result
+		else:
+			print("Unable to authenticate when reading.")
+
+
+	def read_paper_tag_data(self):
+		print("-------------------------------------------------------")
+		print("Reading a paper tag's data...")
+		# No authentication is required with this kind of tag.
+
+		result, value = self.send_command(READ_16_BINARY_BLOCKS)
+
+		if(VERBOSE):
+			print("Value: " + value +  " , Response:  " + str(result))
+			print("Read " + str(value) + " from the card.")
+			print(self.hex_to_string(result))
+			string_array = map(chr, result)
+			print(string_array)
+		print("-------------------------------------------------------")
+		return result
+		
 
 	def write_card_tag_data(self, string):
 		print("-------------------------------------------------------")
@@ -259,43 +306,6 @@ class NFC_Reader():
 		
 		print("-------------------------------------------------------")
 
-	def read_card_tag_data(self):
-		print("-------------------------------------------------------")
-		print("Reading card tag data...")
-		response, value = self.send_command(AUTHENTICATE_CARD)
-
-		if(response == [144, 0]):
-			print("Authentication successful.")
-			print("Reading data blocks...")
-			result, value = self.send_command(READ_16_BINARY_BLOCKS)
-
-			if(VERBOSE):
-				print("Value: " + value +  " , Response:  " + str(result))
-				print(self.ints_to_string(result))
-			print("-------------------------------------------------------")
-			return result
-		else:
-			print("Unable to authenticate when reading.")
-
-
-
-	def read_paper_tag_data(self):
-		print("-------------------------------------------------------")
-		print("Reading a paper tag's data...")
-		# No authentication is required with this kind of tag.
-
-		result, value = self.send_command(READ_16_BINARY_BLOCKS)
-
-		if(VERBOSE):
-			print("Value: " + value +  " , Response:  " + str(result))
-			print("Read " + str(value) + " from the card.")
-			print(self.hex_to_string(result))
-			string_array = map(chr, result)
-			print(string_array)
-		print("-------------------------------------------------------")
-		return result
-		
-
 
 	def hex_to_string(self, hex):
 		return toHexString(hex, format=0)
@@ -319,7 +329,7 @@ def card_tag_testing():
 	print("Read " + str(value) + " from the card.")
 
 	# 5. Write a string to the byte blocks.
-	reader.write_card_tag_data("Another")
+	reader.write_card_tag_data("Anothers")
 
 	# 6. Read the data blocks to verify they were written correctly.
 	value = reader.read_card_tag_data()
