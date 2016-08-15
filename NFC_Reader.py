@@ -99,6 +99,8 @@ attributes = {
 	SCARD_ATTR_VENDOR_NAME: 'SCARD_ATTR_VENDOR_NAME',
 }
 
+FOUR = 4
+
 BLOCK_NUMBER = 0x04
 AUTHENTICATE_CARD = [0xFF, 0x88, 0x00, BLOCK_NUMBER, 0x60, 0x00]
 
@@ -127,11 +129,13 @@ UPDATE_FIXED_BLOCKS = [0xFF, 0xD6, 0x00, BLOCK_NUMBER, NUMBER_BYTES_TO_UPDATE]
 
 
 UPDATE_BLOCKS_WITH_DATA = [0xFF, 0xD6, 0x00, BLOCK_NUMBER]
-READ_BLOCKS_RECENTLY_UPDATED = [0xFF,0xB0,0x00,BLOCK_NUMBER]
+READ_BLOCKS_RECENTLY_UPDATED = [0xFF,0xB0,0x00, BLOCK_NUMBER]
 
-CARD_TAG = [0x01]
-PAPER_TAG = [0x02]
 
+UPDATE_FOUR_BLOCKS = [0xFF, 0xD6, 0x00, 0x04, 0x04, 0x00, 0x01, 0x02, 0x03]
+
+
+UPDATE_COMMAND = [0xFF, 0xD6, 0x00, BLOCK_NUMBER]
 
 class NFC_Reader():
 	def __init__(self):
@@ -230,19 +234,30 @@ class NFC_Reader():
 		if(len(int_array) > 16):
 			return
 
+		number_of_data_blocks = (len(int_array))
+
+		if(number_of_data_blocks != 4):
+			print("Can only write four bytes per single block")
+			return
+
+		# Set the number of bytes to appent
+		UPDATE_COMMAND.append(number_of_data_blocks)
+
 		# Add the converted string to hex blocks to the APDU command.
 		for value in int_array:
-			UPDATE_FIXED_BLOCKS.append(value)
+			UPDATE_COMMAND.append(value)
+		
 
-		print("Writing " + string + " to card...")
+		print("Writing '" + string + "'' to card...")
+		print(UPDATE_COMMAND)
 
 		if(len(string) > 0):
 			print("Writing data blocks...")
-			self.send_command(UPDATE_FIXED_BLOCKS)
+			self.send_command(UPDATE_COMMAND)
 		else:
 			print("Please provide a valid string.")
 		
-		print("------------------------\n")
+		print("-------------------------------------------------------")
 
 	def read_card_tag_data(self):
 		print("-------------------------------------------------------")
@@ -256,6 +271,7 @@ class NFC_Reader():
 
 			if(VERBOSE):
 				print("Value: " + value +  " , Response:  " + str(result))
+				print(self.ints_to_string(result))
 			print("-------------------------------------------------------")
 			return result
 		else:
@@ -272,6 +288,10 @@ class NFC_Reader():
 
 		if(VERBOSE):
 			print("Value: " + value +  " , Response:  " + str(result))
+			print("Read " + str(value) + " from the card.")
+			print(self.hex_to_string(result))
+			string_array = map(chr, result)
+			print(string_array)
 		print("-------------------------------------------------------")
 		return result
 		
@@ -279,6 +299,9 @@ class NFC_Reader():
 
 	def hex_to_string(self, hex):
 		return toHexString(hex, format=0)
+
+	def ints_to_string(self, ints):
+		return map(chr, ints)
 
 
 
@@ -314,38 +337,17 @@ def paper_tag_testing():
 	reader.read_uid()
 
 	# 4. Read the data from the card.
-	value = reader.write_paper_tag_data()
-	print("Read " + str(value) + " from the card.")
-
+	value = reader.read_paper_tag_data()
+	
 	# 5. Write a string to the byte blocks.
-	reader.write_paper_tag_data("Testing")
+	reader.write_paper_tag_data("dude")
 
 	# 6. Read the data blocks to verify they were written correctly.
 	value = reader.read_paper_tag_data()
-	print("Read " + str(value) + " from the card.")
 
 
 if __name__ == '__main__':
-	# 1. Create an NFC_Reader
-	reader = NFC_Reader()
-
-	# 2. Obtain the card status
-	reader.get_tag_status()
-
-	# 3. Read the UID
-	reader.read_uid()
-
-	# 4. Read the data from the card.
-	value = reader.read_paper_tag_data()
-	print("Read " + str(value) + " from the card.")
-
-	
-	# 5. Write a string to the byte blocks.
-	reader.write_paper_tag_data("Testing")
-
-	# 6. Read the data blocks to verify they were written correctly.
-	value = reader.read_paper_tag_data()
-	print("Read " + str(value) + " from the card.")
+	paper_tag_testing()
 
 
 
